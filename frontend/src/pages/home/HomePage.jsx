@@ -8,9 +8,9 @@ const HomePage = () => {
 
   return (
     <>
-      <div className="flex-[4_4_0] mr-auto border-r border-gray-700 min-h-screen">
-        {/* Header */}
-        <div className="flex w-full border-b border-gray-700">
+      <div className="w-full mr-auto border-l border-r border-gray-700 min-h-screen">
+
+        <div className="sticky top-0 bg-black/80 backdrop-blur-md z-20 pl-12 lg:pl-0 flex w-full border-b border-gray-700">
           <div
             className={
               "flex justify-center flex-1 p-3 hover:bg-secondary transition duration-300 cursor-pointer relative"
@@ -33,11 +33,9 @@ const HomePage = () => {
           </div>
         </div>
 
-        {/*  CREATE POST INPUT */}
         <CreatePost />
 
-        {/* POSTS */}
-        <Posts feedType={feedType}/>
+        <Posts feedType={feedType} />
       </div>
     </>
   );
