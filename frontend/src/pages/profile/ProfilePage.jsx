@@ -5,8 +5,6 @@ import Posts from "../../components/common/Posts";
 import ProfileHeaderSkeleton from "../../components/skeletons/ProfileHeaderSkeleton";
 import EditProfileModal from "./EditProfileModal";
 
-import { POSTS } from "../../utils/db/Dummy";
-
 import { FaArrowLeft } from "react-icons/fa6";
 import { IoCalendarOutline } from "react-icons/io5";
 import { FaLink } from "react-icons/fa";
@@ -15,6 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { formatMemberSinceDate } from "../../utils/date";
 import useFollow from "../../hooks/useFollow";
 import useUpdate from "../../hooks/useUpdate";
+import { fetchUser } from "../../services/userService";
 
 const ProfilePage = () => {
   const [coverImg, setCoverImg] = useState(null);
@@ -31,6 +30,8 @@ const ProfilePage = () => {
 
   const { data: authUser } = useQuery({
     queryKey: ["user"],
+    queryFn: fetchUser,
+    retry: false,
   });
 
   const {
@@ -43,6 +44,21 @@ const ProfilePage = () => {
     queryFn: async () => {
       try {
         const res = await fetch(`/api/users/profile/${username}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Something went wrong");
+        return data;
+      } catch (error) {
+        console.error(error);
+        throw error;
+      }
+    },
+  });
+
+  const { data: userPosts, isLoading: postsLoading } = useQuery({
+    queryKey: ["userPosts"],
+    queryFn: async () => {
+      try {
+        const res = await fetch(`/api/posts/user/${username}`);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Something went wrong");
         return data;
@@ -75,14 +91,16 @@ const ProfilePage = () => {
 
   return (
     <>
-      <div className="flex-[4_4_0]  border-r border-gray-700 min-h-screen ">
+      <div className="flex-[4_4_0] border-l border-r border-gray-700 min-h-screen max-w-full lg:max-w-3xl">
         {/* HEADER */}
-        {(isLoading || isRefetching) && <ProfileHeaderSkeleton />}
+        {(isLoading || isRefetching || postsLoading) && (
+          <ProfileHeaderSkeleton />
+        )}
         {!isLoading && !isRefetching && !user && (
           <p className="text-center text-lg mt-4">User not found</p>
         )}
         <div className="flex flex-col">
-          {!isLoading && !isRefetching && user && (
+          {!isLoading && !isRefetching && !postsLoading && user && (
             <>
               <div className="flex gap-10 px-4 py-2 items-center">
                 <Link to="/">
@@ -91,7 +109,7 @@ const ProfilePage = () => {
                 <div className="flex flex-col">
                   <p className="font-bold text-lg">{user?.fullName}</p>
                   <span className="text-sm text-slate-500">
-                    {POSTS?.length} posts
+                    {userPosts?.length} posts
                   </span>
                 </div>
               </div>
@@ -183,17 +201,17 @@ const ProfilePage = () => {
 
                 <div className="flex gap-2 flex-wrap">
                   {user?.link && (
-                    <div className="flex gap-1 items-center ">
+                    <div className="flex gap-1 items-center truncate">
                       <>
                         <FaLink className="w-3 h-3 text-slate-500" />
-                        <a
-                          href="https://youtube.com/@asaprogrammer_"
+                        <Link
+                          to={user?.link}
                           target="_blank"
                           rel="noreferrer"
                           className="text-sm text-blue-500 hover:underline"
                         >
-                          youtube.com/@asaprogrammer_
-                        </a>
+                          <span className="">{user?.link}</span>
+                        </Link>
                       </>
                     </div>
                   )}
@@ -205,21 +223,27 @@ const ProfilePage = () => {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <div className="flex gap-1 items-center">
+                  <Link
+                    to={`/profile/${username}/following`}
+                    className="flex gap-1 items-center hover:underline"
+                  >
                     <span className="font-bold text-xs">
                       {user?.following.length}
                     </span>
                     <span className="text-slate-500 text-xs">Following</span>
-                  </div>
-                  <div className="flex gap-1 items-center">
+                  </Link>
+                  <Link
+                    to={`/profile/${username}/followers`}
+                    className="flex gap-1 items-center hover:underline"
+                  >
                     <span className="font-bold text-xs">
                       {user?.followers.length}
                     </span>
                     <span className="text-slate-500 text-xs">Followers</span>
-                  </div>
+                  </Link>
                 </div>
               </div>
-              <div className="flex w-full border-b border-gray-700 mt-4">
+              <div className="flex lg:relative w-full border-b border-gray-700 mt-4">
                 <div
                   className="flex justify-center flex-1 p-3 hover:bg-secondary transition duration-300 relative cursor-pointer"
                   onClick={() => setFeedType("posts")}
