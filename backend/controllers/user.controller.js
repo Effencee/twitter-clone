@@ -74,6 +74,9 @@ export const getSuggestedUsers = async (req, res) => {
     const filteredUsers = users.filter((user) => {
       return !usersFollowedByMe.following.includes(user._id.toString());
     });
+
+    filteredUsers.sort((a, b) => b.followers.length - a.followers.length);
+    
     const suggestedUsers = filteredUsers.slice(0, 4);
 
     suggestedUsers.forEach((user) => (user.password = null));
@@ -165,6 +168,34 @@ export const updateUser = async (req, res) => {
     res.status(200).json(user);
   } catch (error) {
     console.log("Error in updateUser controller: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getFollowers = async (req, res) => {
+  const { username } = req.params;
+  try {
+    const user = await User.findOne({ username }).populate(
+      "followers",
+      "fullName username profileImg"
+    );
+    res.status(200).json(user.followers);
+  } catch (error) {
+    console.log("Error in getFollowers controller: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getFollowing = async (req, res) => {
+  const { username } = req.params;
+  try {
+    const user = await User.findOne({ username }).populate(
+      "following",
+      "fullName username profileImg"
+    );
+    res.status(200).json(user.following);
+  } catch (error) {
+    console.log("Error in getFollowing controller: ", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };
