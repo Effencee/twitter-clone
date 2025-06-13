@@ -17,7 +17,7 @@ cloudinary.config({
 });
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8000;
 
 app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ extended: true }));
@@ -29,6 +29,6 @@ app.use("/api/posts", postRoutes);
 app.use("/api/notifications", notificationRoutes);
 
 app.listen(PORT, () => {
-  console.log("Server is running on port 8000");
+  console.log("Server is running on port " + PORT);
   connectMongoDB();
 });

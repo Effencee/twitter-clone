@@ -101,6 +101,44 @@ export const likeUnlikePost = async (req, res) => {
   }
 };
 
+export const favUnfovPosts = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { id: postId } = req.params;
+
+    const post = await Post.findById(postId);
+
+    if (!post) {
+      return res.status(404).json({ error: "Post not found" });
+    }
+
+    const isAlreadyFavourite = post.favourites.includes(userId);
+
+    if (isAlreadyFavourite) {
+      await Post.updateOne({ _id: postId }, { $pull: { favourites: userId } });
+      await User.updateOne(
+        { _id: userId },
+        { $pull: { favouritePosts: postId } }
+      );
+      const updatedFavourites = post.favourites.filter(
+        (id) => id.toString() !== userId.toString()
+      );
+      res.status(200).json(updatedFavourites);
+    } else {
+      post.favourites.push(userId);
+      await User.updateOne(
+        { _id: userId },
+        { $push: { favouritePosts: postId } }
+      );
+      await post.save();
+      res.status(200).json(post.favourites);
+    }
+  } catch (error) {
+    console.log("Error in favUnfovPosts controller: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 export const commentOnPost = async (req, res) => {
   try {
     const { text } = req.body;
@@ -122,16 +160,7 @@ export const commentOnPost = async (req, res) => {
 
     const updatedPost = await Post.findById(postId).populate({
       path: "comments.user",
-      select: [
-        "-password",
-        "-email",
-        "-bio",
-        "-link",
-        "-likedPosts",
-        "-coverImg",
-        "-following",
-        "-followers",
-      ],
+      select: "fullName username profileImg",
     });
 
     const notification = new Notification({
@@ -144,6 +173,75 @@ export const commentOnPost = async (req, res) => {
     res.status(200).json(updatedPost);
   } catch (error) {
     console.log("Error in commentOnPost controller: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getPost = async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id)
+      .populate({
+        path: "user",
+        select: "fullName username profileImg",
+      })
+      .populate({
+        path: "comments.user",
+        select: "fullName username profileImg",
+      });
+
+    if (!post) {
+      return res.status(404).json({ error: "Post not found" });
+    }
+
+    res.status(200).json(post);
+  } catch (error) {
+    console.log("Error in getPost controller: ", error.message);
+    console.log("id: " + req.params.id);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const updatePost = async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id).populate({
+      path: "user",
+      select: "fullName username profileImg",
+    });
+
+    const { text } = req.body;
+    let { img } = req.body;
+
+    if (!post) {
+      return res.status(404).json({ error: "Post not found" });
+    }
+
+    if (!text && !img) {
+      return res.status(400).json({ error: "Post must have text or image" });
+    }
+
+    if (post.user._id.toString() !== req.user._id.toString()) {
+      return res
+        .status(401)
+        .json({ error: "You are not authorized to update this post" });
+    }
+
+    if (img) {
+      if (post.img) {
+        await cloudinary.uploader.destroy(
+          post.img.split("/").pop().split(".")[0]
+        );
+      }
+      const uplodaedResponse = await cloudinary.uploader.upload(img);
+      img = uplodaedResponse.secure_url;
+    }
+
+    post.text = text || post.text;
+    post.img = img;
+    await post.save();
+
+    res.status(200).json(post);
+  } catch (error) {
+    console.log("Error in updatePost controller: ", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -176,9 +274,9 @@ export const deletePost = async (req, res) => {
 };
 
 export const getLikedPosts = async (req, res) => {
-  const userId = req.user._id;
   try {
-    const user = await User.findById(userId);
+    const userId = req.params;
+    const user = await User.findOne(userId);
 
     if (!user) {
       return res.status(404).json({ error: "User not found" });
@@ -198,6 +296,33 @@ export const getLikedPosts = async (req, res) => {
     res.status(200).json(likedPosts);
   } catch (error) {
     console.log("Error in getLikedPosts controller: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getFavouritePosts = async (req, res) => {
+  try {
+    const userId = req.params;
+    const user = await User.findOne(userId);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const favouritePosts = await Post.find({
+      _id: { $in: user.favouritePosts },
+    })
+      .populate({
+        path: "user",
+        select: "-password",
+      })
+      .populate({
+        path: "comments.user",
+        select: "-password",
+      });
+    res.status(200).json(favouritePosts);
+  } catch (error) {
+    console.log("Error in getFavouritePosts controller: ", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };
