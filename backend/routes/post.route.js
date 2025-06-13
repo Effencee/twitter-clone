@@ -8,18 +8,29 @@ import {
   getAllPosts,
   getLikedPosts,
   getFollowingPosts,
-  getUserPosts
+  getUserPosts,
+  updatePost,
+  favUnfovPosts,
+  getFavouritePosts,
+  getPost,
 } from "../controllers/post.controller.js";
 
 const router = express.Router();
 
-router.get("/all", protectRoute, getAllPosts);
+//feed
+router.get("/", protectRoute, getAllPosts);
 router.get("/following", protectRoute, getFollowingPosts);
-router.get("/likes/:id", protectRoute, getLikedPosts);
 router.get("/user/:username", protectRoute, getUserPosts);
-router.post("/create", protectRoute, createPost);
-router.post("/like/:id", protectRoute, likeUnlikePost);
-router.post("/comment/:id", protectRoute, commentOnPost);
+router.get("/liked/:username", protectRoute, getLikedPosts);
+router.get("/favourites/:username", protectRoute, getFavouritePosts);
+router.get("/:id", protectRoute, getPost);
+//post
+router.post("/", protectRoute, createPost);
+router.put("/:id", protectRoute, updatePost);
 router.delete("/:id", protectRoute, deletePost);
+//interactions
+router.post("/:id/favourite", protectRoute, favUnfovPosts);
+router.post("/:id/like", protectRoute, likeUnlikePost);
+router.post("/:id/comments", protectRoute, commentOnPost);
 
 export default router;
