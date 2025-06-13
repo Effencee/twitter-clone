@@ -58,6 +58,13 @@ const userSchema = new mongoose.Schema(
         default: [],
       },
     ],
+    favouritePosts: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Post",
+        default: [],
+      },
+    ],
   },
   {
     timestamps: true,

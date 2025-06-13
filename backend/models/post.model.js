@@ -20,6 +20,12 @@ const postSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
+    favourites: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
     comments: [
       {
         text: { type: String, required: true },
