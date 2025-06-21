@@ -1,25 +1,30 @@
 import { FaRegComment } from "react-icons/fa";
 import { BiRepost } from "react-icons/bi";
-import { FaRegHeart } from "react-icons/fa";
+import { FaRegHeart, FaPen } from "react-icons/fa";
 import { FaRegBookmark } from "react-icons/fa6";
 import { FaTrash } from "react-icons/fa";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import LoadingSpinner from "./LoadingSpinner";
 import { formatPostDate } from "../../utils/date";
 import { fetchUser } from "../../services/userService";
+import PostDataFill from "./PostDataFill";
 
 const Post = ({ post }) => {
+  const navigate = useNavigate();
   const { data } = useQuery({
     queryKey: ["user"],
     queryFn: fetchUser,
   });
+  const [isEditing, setIsEditing] = useState(false);
   const [comment, setComment] = useState("");
   const queryClient = useQueryClient();
   const postOwner = post.user;
   const isLiked = post.likes.includes(data._id);
+  const isFavourite = post.favourites.includes(data._id);
+  const location = useLocation();
 
   const isMyPost = data._id === post.user._id;
 
@@ -45,13 +50,14 @@ const Post = ({ post }) => {
     onSuccess: () => {
       toast.success("Post deleted successfully");
       queryClient.invalidateQueries({ queryKey: ["posts"] });
+      navigate("/");
     },
   });
 
   const { mutate: likePost, isPending: isLikePending } = useMutation({
     mutationFn: async () => {
       try {
-        const res = await fetch(`/api/posts/like/${post._id}`, {
+        const res = await fetch(`/api/posts/${post._id}/like`, {
           method: "POST",
         });
         const data = await res.json();
@@ -64,6 +70,7 @@ const Post = ({ post }) => {
     },
     onSuccess: (updatedLikes) => {
       queryClient.setQueryData(["posts"], (oldPosts) => {
+        if (!Array.isArray(oldPosts)) return oldPosts;
         return oldPosts.map((p) => {
           if (p._id === post._id) {
             return { ...p, likes: updatedLikes };
@@ -71,16 +78,25 @@ const Post = ({ post }) => {
           return p;
         });
       });
+
+      queryClient.setQueryData(["post"], (oldPost) => {
+        if (!oldPost) return oldPost;
+        return {
+          ...oldPost,
+          likes: updatedLikes,
+        };
+      });
     },
     onError: (error) => {
       toast.error(error.message);
+      console.log(error.message);
     },
   });
 
   const { mutate: commentPost, isPending: isCommentPending } = useMutation({
     mutationFn: async () => {
       try {
-        const res = await fetch(`/api/posts/comment/${post._id}`, {
+        const res = await fetch(`/api/posts/${post._id}/comment`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -110,6 +126,44 @@ const Post = ({ post }) => {
     },
   });
 
+  const { mutate: favouritePost, isPending: isFavouritePending } = useMutation({
+    mutationFn: async () => {
+      try {
+        const res = await fetch(`/api/posts/${post._id}/favourite`, {
+          method: "POST",
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Something went wrong");
+        return data;
+      } catch (error) {
+        console.error(error);
+        throw error;
+      }
+    },
+    onSuccess: (updatedFavourites) => {
+      queryClient.setQueryData(["posts"], (oldPosts) => {
+        if (!Array.isArray(oldPosts)) return oldPosts;
+        return oldPosts.map((p) => {
+          if (p._id === post._id) {
+            return { ...p, favourites: updatedFavourites };
+          }
+          return p;
+        });
+      });
+
+      queryClient.setQueryData(["post"], (oldPost) => {
+        if (!oldPost) return oldPost;
+        return {
+          ...oldPost,
+          favourites: updatedFavourites,
+        };
+      });
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+
   const handleDeletePost = () => {
     mutate();
   };
@@ -125,6 +179,11 @@ const Post = ({ post }) => {
     likePost();
   };
 
+  const handleToggleFavourite = () => {
+    if (isFavouritePending) return;
+    favouritePost();
+  };
+
   return (
     <>
       <div className="flex gap-2 items-start p-4 border-b border-gray-700">
@@ -133,12 +192,15 @@ const Post = ({ post }) => {
             to={`/profile/${postOwner.username}`}
             className="w-10 h-10 lg:w-12 lg:h-12 rounded-full overflow-hidden"
           >
-            <img src={postOwner.profileImg || "/avatar-placeholder.png"}/>
+            <img src={postOwner.profileImg || "/avatar-placeholder.png"} />
           </Link>
         </div>
         <div className="flex flex-col flex-1">
           <div className="flex gap-2 items-center">
-            <Link to={`/profile/${postOwner.username}`} className="font-bold lg:text-lg">
+            <Link
+              to={`/profile/${postOwner.username}`}
+              className="font-bold lg:text-lg"
+            >
               {postOwner.fullName}
             </Link>
             <span className="text-gray-700 flex gap-1 lg:text-lg">
@@ -149,19 +211,37 @@ const Post = ({ post }) => {
               <span>{formattedDate}</span>
             </span>
             {isMyPost && (
-              <span className="flex justify-end flex-1">
-                {!isPending && (
-                  <FaTrash
-                    className="cursor-pointer hover:text-red-500"
-                    onClick={handleDeletePost}
-                  />
-                )}
-                {isPending && <LoadingSpinner size="sm" />}
-              </span>
+              <>
+                <span className="flex justify-end gap-4 flex-1">
+                  {!isEditing && (
+                    <FaPen
+                      className="cursor-pointer hover:text-primary"
+                      onClick={() => setIsEditing(true)}
+                    />
+                  )}
+
+                  {!isPending && !isEditing && (
+                    <FaTrash
+                      className="cursor-pointer hover:text-red-500"
+                      onClick={handleDeletePost}
+                    />
+                  )}
+                  {isPending && <LoadingSpinner size="sm" />}
+                </span>
+              </>
             )}
           </div>
-          <div className="flex flex-col gap-3 overflow-hidden">
-            <span className="text-lg">{post.text}</span>
+          <PostDataFill
+            post={post}
+            isEditing={isEditing}
+            setIsEditing={setIsEditing}
+          />
+          <Link
+            to={`/${post._id}`}
+            state={{ from: location.pathname }}
+            className="flex flex-col gap-3 overflow-hidden"
+          >
+            <span className="text-lg whitespace-pre-line">{post.text}</span>
             {post.img && (
               <img
                 src={post.img}
@@ -169,7 +249,7 @@ const Post = ({ post }) => {
                 alt=""
               />
             )}
-          </div>
+          </Link>
           <div className="flex justify-between mt-3">
             <div className="flex gap-4 items-center w-2/3 justify-between">
               <div
@@ -274,9 +354,18 @@ const Post = ({ post }) => {
                   {post.likes.length}
                 </span>
               </div>
-            </div>
-            <div className="flex w-1/3 justify-end gap-2 items-center">
-              <FaRegBookmark className="w-4 h-4 text-slate-500 cursor-pointer" />
+            </div>{" "}
+            <div
+              className="flex w-1/3 justify-end gap-2 items-center"
+              onClick={handleToggleFavourite}
+            >
+              {isFavouritePending && <LoadingSpinner size="sm" />}
+              {!isFavouritePending && !isFavourite && (
+                <FaRegBookmark className="w-4 h-4 cursor-pointer text-slate-500 hover:text-yellow-500" />
+              )}
+              {!isFavouritePending && isFavourite && (
+                <FaRegBookmark className="w-4 h-4 cursor-pointer text-yellow-500" />
+              )}
             </div>
           </div>
         </div>
