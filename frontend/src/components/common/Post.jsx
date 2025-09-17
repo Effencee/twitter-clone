@@ -25,9 +25,7 @@ const Post = ({ post }) => {
   const isLiked = post.likes.includes(data._id);
   const isFavourite = post.favourites.includes(data._id);
   const location = useLocation();
-
   const isMyPost = data._id === post.user._id;
-
   const formattedDate = formatPostDate(post.createdAt);
 
   const { mutate, isPending } = useMutation({
@@ -96,7 +94,7 @@ const Post = ({ post }) => {
   const { mutate: commentPost, isPending: isCommentPending } = useMutation({
     mutationFn: async () => {
       try {
-        const res = await fetch(`/api/posts/${post._id}/comment`, {
+        const res = await fetch(`/api/posts/${post._id}/comments`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -113,6 +111,9 @@ const Post = ({ post }) => {
     },
     onSuccess: (updatedPost) => {
       toast.success("Comment added successfully");
+      const modal =
+        document.getElementById("comments_modal" + post._id) || null;
+      modal?.close();
       setComment("");
       const newComment = updatedPost.comments.at(-1);
       queryClient.setQueryData(["posts"], (oldPosts) => {
@@ -270,58 +271,103 @@ const Post = ({ post }) => {
                 className="modal border-none outline-none"
               >
                 <div className="modal-box rounded border border-gray-600">
-                  <h3 className="font-bold text-lg mb-4">COMMENTS</h3>
-                  <div className="flex flex-col gap-3 max-h-60 overflow-auto">
-                    {post.comments.length === 0 && (
-                      <p className="text-sm text-slate-500">
-                        No comments yet 🤔 Be the first one 😉
-                      </p>
-                    )}
-                    {post.comments
-                      .slice()
-                      .reverse()
-                      .map((comment) => (
-                        <div
-                          key={comment._id}
-                          className="flex gap-2 items-start"
+                  <div className="flex gap-2">
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="avatar">
+                        <Link
+                          to={`/profile/${postOwner.username}`}
+                          className="w-10 h-10 lg:w-12 lg:h-12 rounded-full overflow-hidden"
                         >
-                          <div className="avatar">
-                            <div className="w-8 rounded-full">
-                              <img
-                                src={
-                                  comment.user.profileImg ||
-                                  "/avatar-placeholder.png"
-                                }
-                              />
-                            </div>
-                          </div>
-                          <div className="flex flex-col">
-                            <div className="flex items-center gap-1">
-                              <span className="font-bold">
-                                {comment.user.fullName}
-                              </span>
-                              <span className="text-gray-700 text-sm">
-                                @{comment.user.username}
-                              </span>
-                            </div>
-                            <div className="text-sm">{comment.text}</div>
-                          </div>
+                          <img
+                            src={
+                              postOwner.profileImg || "/avatar-placeholder.png"
+                            }
+                          />
+                        </Link>
+                      </div>
+                      <div className="w-0.5 h-full bg-gray-600"></div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <div>
+                        <div className="flex gap-2 items-center">
+                          <Link
+                            to={`/profile/${postOwner.username}`}
+                            className="font-bold lg:text-lg"
+                          >
+                            {postOwner.fullName}
+                          </Link>
+                          <span className="text-gray-700 flex gap-1 lg:text-lg">
+                            <Link to={`/profile/${postOwner.username}`}>
+                              @{postOwner.username}
+                            </Link>
+                            <span>·</span>
+                            <span>{formattedDate}</span>
+                          </span>
                         </div>
-                      ))}
+                      </div>
+
+                      <div className="flex flex-col gap-3 overflow-x-hidden max-h-[30vh] lg:max-h-[50vh]">
+                        <span className="text-lg whitespace-pre-line">
+                          {post.text}
+                        </span>
+                        {post.img && (
+                          <img
+                            src={post.img}
+                            className="h-80 object-contain rounded-lg border border-gray-700"
+                            alt=""
+                          />
+                        )}
+                      </div>
+                      <div className="text-gray-600 py-4">
+                        Commenting to{" "}
+                        <Link
+                          to={`/profile/${postOwner.username}`}
+                          className="text-sky-600"
+                        >
+                          @{postOwner.username}
+                        </Link>
+                      </div>
+                    </div>
                   </div>
+
                   <form
-                    className="flex gap-2 items-center mt-4 border-t border-gray-600 pt-2"
+                    className="flex gap-2 items-center mt-4 pt-2"
                     onSubmit={handlePostComment}
                   >
-                    <textarea
-                      className="textarea w-full p-1 rounded text-md resize-none border focus:outline-none  border-gray-800"
-                      placeholder="Add a comment..."
-                      value={comment}
-                      onChange={(e) => setComment(e.target.value)}
-                    />
-                    <button className="btn btn-primary rounded-full btn-sm text-white px-4">
-                      {isCommentPending ? <LoadingSpinner size="md" /> : "Post"}
-                    </button>
+                    <div className="w-full">
+                      <div className="flex gap-2 ">
+                        <div className="avatar">
+                          <Link
+                            to={`/profile/${data.username}`}
+                            className="w-10 h-10 lg:w-12 lg:h-12 rounded-full overflow-hidden"
+                          >
+                            <img
+                              src={data.profileImg || "/avatar-placeholder.png"}
+                            />
+                          </Link>
+                        </div>
+                        <textarea
+                          className="textarea w-full p-1 rounded text-md resize-none border focus:outline-none border-gray-800"
+                          placeholder="Add a comment..."
+                          value={comment}
+                          onChange={(e) => setComment(e.target.value)}
+                        />
+                      </div>
+
+                      {/* dodac przyciski do ikon etc. */}
+                      <div className="flex justify-end">
+                        <button
+                          type="submit"
+                          className="btn btn-primary rounded-full btn-sm text-white px-4 mt-4"
+                        >
+                          {isCommentPending ? (
+                            <LoadingSpinner size="md" />
+                          ) : (
+                            "Comment"
+                          )}
+                        </button>
+                      </div>
+                    </div>
                   </form>
                 </div>
                 <form method="dialog" className="modal-backdrop">
