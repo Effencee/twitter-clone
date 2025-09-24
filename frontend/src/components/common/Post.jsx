@@ -11,6 +11,7 @@ import LoadingSpinner from "./LoadingSpinner";
 import { formatPostDate } from "../../utils/date";
 import { fetchUser } from "../../services/userService";
 import PostDataFill from "./PostDataFill";
+import useAddComment from "../../hooks/useAddComment";
 
 const Post = ({ post }) => {
   const navigate = useNavigate();
@@ -91,41 +92,11 @@ const Post = ({ post }) => {
     },
   });
 
-  const { mutate: commentPost, isPending: isCommentPending } = useMutation({
-    mutationFn: async () => {
-      try {
-        const res = await fetch(`/api/posts/${post._id}/comments`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ text: comment }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Something went wrong");
-        return data;
-      } catch (error) {
-        console.error(error);
-        throw error;
-      }
-    },
-    onSuccess: (updatedPost) => {
-      toast.success("Comment added successfully");
-      const modal =
-        document.getElementById("comments_modal" + post._id) || null;
-      modal?.close();
-      setComment("");
-      const newComment = updatedPost.comments.at(-1);
-      queryClient.setQueryData(["posts"], (oldPosts) => {
-        return oldPosts.map((p) => {
-          if (p._id === post._id) {
-            return { ...p, comments: [...p.comments, newComment] };
-          }
-          return p;
-        });
-      });
-    },
-  });
+  const { commentPost, isCommentPending } = useAddComment(
+    post._id,
+    comment,
+    setComment
+  );
 
   const { mutate: favouritePost, isPending: isFavouritePending } = useMutation({
     mutationFn: async () => {
@@ -173,6 +144,8 @@ const Post = ({ post }) => {
     e.preventDefault();
     if (isCommentPending) return;
     commentPost();
+    const modal = document.getElementById("comments_modal" + post._id) || null;
+    modal?.close();
   };
 
   const handleLikePost = () => {
