@@ -2,15 +2,17 @@ import { useState } from "react";
 import Post from "./Post";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation, useParams } from "react-router-dom";
-import { FaArrowLeft, FaRegHeart } from "react-icons/fa";
+import { FaArrowLeft } from "react-icons/fa";
 import SelectedPostSkeleton from "../skeletons/SelectedPostSkeleton";
 import { fetchUser } from "../../services/userService";
 import Reply from "./Reply";
 import useAddComment from "../../hooks/useAddComment";
+import CommentCard from "./CommentCard";
 
 const SelectedPost = () => {
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [comment, setComment] = useState("");
+  const [reply, setReply] = useState("");
   const postId = useParams().id;
   const location = useLocation();
 
@@ -54,7 +56,6 @@ const SelectedPost = () => {
 
   return (
     <div className="w-3xl border-r border-l border-gray-700">
-      {/*arrow back*/}
       <div className="flex gap-10 px-4 py-2 items-center border-b border-gray-700">
         <Link to={from || "/"}>
           <FaArrowLeft className="w-4 h-4" />
@@ -69,66 +70,32 @@ const SelectedPost = () => {
           <SelectedPostSkeleton />
         </div>
       )}
-      {/*Post*/}
 
       {!isPostLoading && !isRefetching && !isUserLoading && (
         <>
           <Post post={post} />
           <Reply
             user={user}
-            comment={comment}
-            setComment={setComment}
+            answer={comment}
+            setAnswer={setComment}
             handleSubmit={handleSubmit}
-            isCommentPending={isCommentPending}
+            isAnswerPending={isCommentPending}
           />
         </>
       )}
-      {/*Form to add comment*/}
-
-      {/*Comments*/}
+      <span className="block border-t border-gray-700"></span>
       {!isRefetching &&
         post?.comments.map((comment) => (
-          <div
+          <CommentCard
             key={comment._id}
-            className={`${
-              showReplyInput === comment._id
-                ? ""
-                : "border-b border-gray-700 pb-4"
-            }`}
-          >
-            <div className="flex gap-2 items-start px-4 pt-4 pb-2">
-              <div className="avatar">
-                <div className="w-8 h-8 lg:w-12 lg:h-12 rounded-full">
-                  <img
-                    src={comment.user.profileImg || "/avatar-placeholder.png"}
-                  />
-                </div>
-              </div>
-              <div className="flex flex-col">
-                <div className="flex items-center gap-1">
-                  <span className="font-bold lg:text-lg">
-                    {comment.user.fullName}
-                  </span>
-                  <span className="text-gray-700 text-sm lg:text-lg">
-                    @{comment.user.username}
-                  </span>
-                </div>
-                <div className="text-sm lg:text-lg">{comment.text}</div>
-              </div>
-            </div>
-            <div className="flex gap-8 items-center">
-              <div className="pl-14 lg:pl-18">
-                <FaRegHeart className="w-4 h-4 cursor-pointer text-slate-500 hover:text-pink-500" />
-              </div>
-              <button
-                className="font-bold cursor-pointer hover:bg-primary/40 px-4 h-8 rounded-full"
-                onClick={() => setShowReplyInput(comment._id)}
-              >
-                Reply
-              </button>
-            </div>
-            {showReplyInput === comment._id && <Reply user={user} />}
-          </div>
+            user={comment.user}
+            reply={reply}
+            setReply={setReply}
+            comment={comment}
+            showReplyInput={showReplyInput}
+            setShowReplyInput={setShowReplyInput}
+            postId={postId}
+          />
         ))}
     </div>
   );
