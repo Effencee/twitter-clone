@@ -13,6 +13,8 @@ import {
   favUnfovPosts,
   getFavouritePosts,
   getPost,
+  replyToComment,
+  getAllReplies,
 } from "../controllers/post.controller.js";
 
 const router = express.Router();
@@ -32,5 +34,8 @@ router.delete("/:id", protectRoute, deletePost);
 router.post("/:id/favourite", protectRoute, favUnfovPosts);
 router.post("/:id/like", protectRoute, likeUnlikePost);
 router.post("/:id/comments", protectRoute, commentOnPost);
+//replies
+router.post("/:id/comments/:commentId/replies", protectRoute, replyToComment);
+router.get("/:id/comments/:commentId/replies", protectRoute, getAllReplies);
 
 export default router;

@@ -177,6 +177,73 @@ export const commentOnPost = async (req, res) => {
   }
 };
 
+export const replyToComment = async (req, res) => {
+  try {
+    const { text } = req.body;
+    const userId = req.user._id;
+    const postId = req.params.id;
+    const commentId = req.params.commentId;
+
+    if (!text) {
+      return res.status(400).json({ error: "Text field is required" });
+    }
+
+    const post = await Post.findById(postId);
+
+    if (!post) {
+      return res.status(404).json({ error: "Post not found" });
+    }
+
+    const comment = post.comments.find(
+      (comment) => comment._id.toString() === commentId
+    );
+
+    if (!comment) {
+      return res.status(404).json({ error: "Comment not found" });
+    }
+
+    comment.replies.push({ user: userId, text });
+    await post.save();
+
+    const savedReply = comment.replies[comment.replies.length - 1]; 
+
+    const notification = new Notification({
+      from: userId,
+      to: post.user,
+      type: "reply",
+    });
+    await notification.save();
+
+    res.status(200).json(savedReply);
+  } catch (error) {
+    console.log("Error in replieToComment controller: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getAllReplies = async (req, res) => {
+  try {
+    const commentId = req.params.commentId;
+    const post = await Post.findById(req.params.id).populate({
+      path: "comments.replies.user",
+      select: "fullName username profileImg",
+    });
+    if (!post) {
+      return res.status(404).json({ error: "Post not found" });
+    }
+    const comment = post.comments.find(
+      (comment) => comment._id.toString() === commentId
+    );
+    if (!comment) {
+      return res.status(404).json({ error: "Comment not found" });
+    }
+    res.status(200).json(comment.replies);
+  } catch (error) {
+    console.log("Error in getAllReplies controller: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 export const getPost = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id)
