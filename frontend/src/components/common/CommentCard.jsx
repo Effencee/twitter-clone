@@ -4,6 +4,8 @@ import { MdKeyboardArrowDown } from "react-icons/md";
 import Reply from "./Reply";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import LoadingSpinner from "./LoadingSpinner";
+import { fetchUser } from "../../services/userService";
+import ReplyCard from "./ReplyCard";
 
 const CommentCard = ({
   comment,
@@ -14,8 +16,15 @@ const CommentCard = ({
   setReply,
   postId,
 }) => {
+  const { data } = useQuery({
+    queryKey: ["user"],
+    queryFn: fetchUser,
+  });
   const [expandedComments, setExpandedComments] = useState({});
+  const [replyInput, setReplyInput] = useState(false);
+  const [replyText, setReplyText] = useState("");
   const queryClient = useQueryClient();
+  const isCommentLiked = comment.likes.includes(data._id);
 
   const { data: replies, isPending: isRepliesPending } = useQuery({
     queryKey: ["replies", comment?._id],
@@ -44,7 +53,7 @@ const CommentCard = ({
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({ text: reply }),
+            body: JSON.stringify({ text: reply || replyText }),
           }
         );
         const data = await res.json();
@@ -57,10 +66,49 @@ const CommentCard = ({
     },
     onSuccess: (newReply) => {
       setShowReplyInput(false);
+      setReplyInput(false);
       setReply("");
       queryClient.setQueryData(["replies", comment?._id], (oldReplies) => {
         if (!oldReplies) return oldReplies;
         return [...oldReplies, newReply];
+      });
+    },
+  });
+
+  const { mutate: likeComment, isPending: isLikePending } = useMutation({
+    mutationFn: async () => {
+      try {
+        const res = await fetch(
+          `/api/posts/${postId}/comments/${comment?._id}/like`,
+          {
+            method: "POST",
+          }
+        );
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Something went wrong");
+        return data;
+      } catch (error) {
+        console.log(error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.setQueryData(["post"], (oldPost) => {
+        if (!oldPost) return oldPost;
+
+        return {
+          ...oldPost,
+          comments: oldPost.comments.map((c) => {
+            if (c._id === comment._id) {
+              if (c.likes.includes(data._id)) {
+                return { ...c, likes: c.likes.filter((id) => id !== data._id) };
+              } else {
+                return { ...c, likes: [...c.likes, data._id] };
+              }
+            }
+            return c;
+          }),
+        };
       });
     },
   });
@@ -70,6 +118,11 @@ const CommentCard = ({
       ...prev,
       [commentId]: !prev[commentId],
     }));
+  };
+
+  const handleLikeComment = () => {
+    if (isLikePending) return;
+    likeComment();
   };
 
   const handleReply = (e) => {
@@ -99,12 +152,32 @@ const CommentCard = ({
         </div>
       </div>
       <div className="flex gap-8 items-center">
-        <div className="pl-14 lg:pl-18">
-          <FaRegHeart className="w-4 h-4 cursor-pointer text-slate-500 hover:text-pink-500" />
+        <div
+          className="pl-14 lg:pl-18 flex gap-1 items-center group cursor-pointer"
+          onClick={handleLikeComment}
+        >
+          {isLikePending && <LoadingSpinner size="sm" />}
+          {!isCommentLiked && !isLikePending && (
+            <FaRegHeart className="w-4 h-4 cursor-pointer text-slate-500 group-hover:text-pink-500" />
+          )}
+          {isCommentLiked && !isLikePending && (
+            <FaRegHeart className="w-4 h-4 cursor-pointer text-pink-500 " />
+          )}
+
+          <span
+            className={`text-sm group-hover:text-pink-500 ${
+              isCommentLiked ? "text-pink-500" : "text-slate-500"
+            }`}
+          >
+            {comment.likes.length}
+          </span>
         </div>
         <button
           className="font-bold cursor-pointer hover:bg-primary/40 px-4 h-8 rounded-full"
-          onClick={() => setShowReplyInput(comment._id)}
+          onClick={() => {
+            setShowReplyInput(comment._id);
+            setReplyInput(false);
+          }}
         >
           Reply
         </button>
@@ -132,40 +205,20 @@ const CommentCard = ({
       {isRepliesPending && <LoadingSpinner />}
       {expandedComments[comment._id] &&
         replies.map((reply) => (
-          // <></>
-          <div className="pl-12" key={reply._id}>
-            <div className="flex gap-2 items-start px-4 pt-4 pb-2">
-              <div className="avatar">
-                <div className="w-8 h-8 lg:w-12 lg:h-12 rounded-full">
-                  <img
-                    src={comment.user.profileImg || "/avatar-placeholder.png"}
-                  />
-                </div>
-              </div>
-              <div className="flex flex-col">
-                <div className="flex items-center gap-1">
-                  <span className="font-bold lg:text-lg">
-                    {comment.user.fullName}
-                  </span>
-                  <span className="text-gray-700 text-sm lg:text-lg">
-                    @{comment.user.username}
-                  </span>
-                </div>
-                <div className="text-sm lg:text-lg">{reply.text}</div>
-              </div>
-            </div>
-            <div className="flex gap-8 items-center">
-              <div className="pl-14 lg:pl-18">
-                <FaRegHeart className="w-4 h-4 cursor-pointer text-slate-500 hover:text-pink-500" />
-              </div>
-              <button
-                className="font-bold cursor-pointer hover:bg-primary/40 px-4 h-8 rounded-full"
-                onClick={() => setShowReplyInput(comment._id)}
-              >
-                Reply
-              </button>
-            </div>
-          </div>
+          <ReplyCard
+            key={reply._id}
+            user={user}
+            comment={comment}
+            reply={reply}
+            replyText={replyText}
+            replyInput={replyInput}
+            setReplyText={setReplyText}
+            setShowReplyInput={setShowReplyInput}
+            setReplyInput={setReplyInput}
+            handleReply={handleReply}
+            isReplyPending={isReplyPending}
+            postId={postId}
+          />
         ))}
     </div>
   );
