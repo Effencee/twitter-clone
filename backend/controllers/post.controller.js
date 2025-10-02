@@ -177,6 +177,47 @@ export const commentOnPost = async (req, res) => {
   }
 };
 
+export const likeUnlikeComment = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { id: postId, commentId: commentId } = req.params;
+
+    const post = await Post.findById(postId);
+
+    if (!post) {
+      return res.status(404).json({ error: "Post not found" });
+    }
+
+    const comment = post.comments.find(
+      (comment) => comment._id.toString() === commentId
+    );
+
+    if (!comment) {
+      return res.status(404).json({ error: "Comment not found" });
+    }
+
+    const isLiked = comment.likes.includes(userId);
+
+    if (isLiked) {
+      await Post.updateOne(
+        { _id: postId, "comments._id": commentId },
+        { $pull: { "comments.$.likes": userId } }
+      );
+      const updatedLikes = comment.likes.filter(
+        (id) => id.toString() !== userId.toString()
+      );
+      res.status(200).json(updatedLikes);
+    } else {
+      comment.likes.push(userId);
+      await post.save();
+      res.status(200).json(comment.likes);
+    }
+  } catch (error) {
+    console.log("Error in likeUnlikeComment controller: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 export const replyToComment = async (req, res) => {
   try {
     const { text } = req.body;
@@ -205,7 +246,7 @@ export const replyToComment = async (req, res) => {
     comment.replies.push({ user: userId, text });
     await post.save();
 
-    const savedReply = comment.replies[comment.replies.length - 1]; 
+    const savedReply = comment.replies[comment.replies.length - 1];
 
     const notification = new Notification({
       from: userId,
@@ -217,6 +258,54 @@ export const replyToComment = async (req, res) => {
     res.status(200).json(savedReply);
   } catch (error) {
     console.log("Error in replieToComment controller: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const likeUnlikeReply = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { id: postId, commentId: commentId, replyId: replyId } = req.params;
+
+    const post = await Post.findById(postId);
+
+    if (!post) {
+      return res.status(404).json({ error: "Post not found" });
+    }
+
+    const comment = post.comments.find(
+      (comment) => comment._id.toString() === commentId
+    );
+
+    if (!comment) {
+      return res.status(404).json({ error: "Comment not found" });
+    }
+
+    const reply = comment.replies.find(
+      (reply) => reply._id.toString() === replyId
+    );
+
+    if (!reply) {
+      return res.status(404).json({ error: "Reply not found" });
+    }
+
+    const isLiked = reply.likes.some(
+      (id) => id.toString() === userId.toString()
+    );
+
+    if (isLiked) {
+      reply.likes = reply.likes.filter(
+        (id) => id.toString() !== userId.toString()
+      );
+    } else {
+      reply.likes.push(userId);
+    }
+
+    await post.save();
+
+    res.status(200).json(reply.likes.map((id) => id.toString()));
+  } catch (error) {
+    console.log("Error in likeUnlikeReply controller: ", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };

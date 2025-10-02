@@ -34,6 +34,12 @@ const postSchema = new mongoose.Schema(
           ref: "User",
           required: true,
         },
+        likes: [
+          {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+          },
+        ],
         replies: [
           {
             text: { type: String, required: true },
@@ -42,6 +48,12 @@ const postSchema = new mongoose.Schema(
               ref: "User",
               required: true,
             },
+            likes: [
+              {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "User",
+              },
+            ],
           },
         ],
       },
