@@ -246,17 +246,7 @@ export const replyToComment = async (req, res) => {
     comment.replies.push({ user: userId, text });
     await post.save();
 
-    const populatedPost = await Post.findById(postId).populate({
-      path: "comments.replies.user",
-      select: "fullName username profileImg",
-    });
-
-    const populatedComment = populatedPost.comments.find(
-      (c) => c._id.toString() === commentId
-    );
-
-    const lastReply =
-      populatedComment.replies[populatedComment.replies.length - 1];
+    const savedReply = comment.replies[comment.replies.length - 1];
 
     const notification = new Notification({
       from: userId,
@@ -265,7 +255,7 @@ export const replyToComment = async (req, res) => {
     });
     await notification.save();
 
-    res.status(200).json(lastReply);
+    res.status(200).json(savedReply);
   } catch (error) {
     console.log("Error in replieToComment controller: ", error.message);
     res.status(500).json({ error: "Internal server error" });
