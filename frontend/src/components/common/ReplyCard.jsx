@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import Reply from "./Reply";
 import RenderComment from "./RenderComment";
-import { FaRegHeart } from "react-icons/fa";
+import { FaPen, FaRegHeart, FaTrash } from "react-icons/fa";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchUser } from "../../services/userService";
 import LoadingSpinner from "./LoadingSpinner";
+import CommentReplyEdit from "./CommentReplyEdit";
 
 const ReplyCard = ({
   comment,
@@ -24,6 +25,8 @@ const ReplyCard = ({
   });
   const queryClient = useQueryClient();
   const isReplyLiked = reply.likes.includes(data._id);
+  const [editReply, setEditReply] = useState(false);
+  const isMyReply = data._id === reply.user._id;
 
   const { mutate: likeReply, isPending: isLikeReplyPending } = useMutation({
     mutationFn: async () => {
@@ -72,14 +75,34 @@ const ReplyCard = ({
             <img src={reply.user.profileImg || "/avatar-placeholder.png"} />
           </div>
         </div>
-        <div className="flex flex-col">
+        <div className="flex flex-col grow">
           <div className="flex items-center gap-1">
-            <span className="font-bold lg:text-lg">
-              {reply.user.fullName}
-            </span>
-            <span className="text-gray-700 text-sm lg:text-lg">
-              @{reply.user.username}
-            </span>
+            <div className="flex gap-2">
+              <span className="font-bold lg:text-lg">
+                {reply.user.fullName}
+              </span>
+              <span className="text-gray-700 text-sm lg:text-lg">
+                @{reply.user.username}
+              </span>
+            </div>
+            {isMyReply && (
+              <span className="flex gap-4 flex-1 justify-end">
+                {!editReply && (
+                  <FaPen
+                    className="cursor-pointer hover:text-primary"
+                    onClick={() => setEditReply(true)}
+                  />
+                )}
+                <FaTrash className="cursor-pointer hover:text-red-500" />
+              </span>
+            )}
+            <CommentReplyEdit
+              reply={reply}
+              isEditing={editReply}
+              setIsEditing={setEditReply}
+              comment={comment}
+              postId={postId}
+            />
           </div>
           <div className="text-sm lg:text-lg">
             {<RenderComment text={reply.text} />}

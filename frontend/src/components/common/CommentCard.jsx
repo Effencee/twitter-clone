@@ -1,11 +1,12 @@
 import React, { useState } from "react";
-import { FaRegHeart } from "react-icons/fa";
+import { FaPen, FaRegHeart, FaTrash } from "react-icons/fa";
 import { MdKeyboardArrowDown } from "react-icons/md";
 import Reply from "./Reply";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import LoadingSpinner from "./LoadingSpinner";
 import { fetchUser } from "../../services/userService";
 import ReplyCard from "./ReplyCard";
+import CommentReplyEdit from "./CommentReplyEdit";
 
 const CommentCard = ({
   comment,
@@ -22,8 +23,10 @@ const CommentCard = ({
   const [expandedComments, setExpandedComments] = useState({});
   const [replyInput, setReplyInput] = useState(false);
   const [replyText, setReplyText] = useState("");
+  const [editComment, setEditComment] = useState(false);
   const queryClient = useQueryClient();
   const isCommentLiked = comment.likes.includes(data._id);
+  const isMyComment = data._id === comment.user._id;
 
   const { data: replies, isPending: isRepliesPending } = useQuery({
     queryKey: ["replies", comment?._id],
@@ -132,20 +135,39 @@ const CommentCard = ({
 
   return (
     <div key={comment._id} className="border-b border-gray-700 pb-4">
-      <div className="flex gap-2 items-start px-4 pt-4 pb-2">
+      <div className="flex gap-2 items-start w-full px-4 pt-4 pb-2">
         <div className="avatar">
           <div className="w-8 h-8 lg:w-12 lg:h-12 rounded-full">
             <img src={comment.user.profileImg || "/avatar-placeholder.png"} />
           </div>
         </div>
-        <div className="flex flex-col">
+        <div className="flex flex-col grow">
           <div className="flex items-center gap-1">
-            <span className="font-bold lg:text-lg">
-              {comment.user.fullName}
-            </span>
-            <span className="text-gray-700 text-sm lg:text-lg">
-              @{comment.user.username}
-            </span>
+            <div className="flex gap-2">
+              <span className="font-bold lg:text-lg">
+                {comment.user.fullName}
+              </span>
+              <span className="text-gray-700 text-sm lg:text-lg">
+                @{comment.user.username}
+              </span>
+            </div>
+            {isMyComment && (
+              <span className="flex gap-4 flex-1 justify-end">
+                {!editComment && (
+                  <FaPen
+                    className="cursor-pointer hover:text-primary"
+                    onClick={() => setEditComment(true)}
+                  />
+                )}
+                <FaTrash className="cursor-pointer hover:text-red-500" />
+              </span>
+            )}
+            <CommentReplyEdit
+              isEditing={editComment}
+              postId={postId}
+              comment={comment}
+              setIsEditing={setEditComment}
+            />
           </div>
           <div className="text-sm lg:text-lg">{comment.text}</div>
         </div>
