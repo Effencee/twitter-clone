@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchUser } from "../../services/userService";
 import LoadingSpinner from "./LoadingSpinner";
 import CommentReplyEdit from "./CommentReplyEdit";
+import toast from "react-hot-toast";
 
 const ReplyCard = ({
   comment,
@@ -62,9 +63,40 @@ const ReplyCard = ({
     },
   });
 
+  const { mutate: deleteReply, isPending: isDeleteReplyPending } = useMutation({
+    mutationFn: async () => {
+      try {
+        const res = await fetch(
+          `/api/posts/${postId}/comments/${comment?._id}/replies/${reply?._id}`,
+          {
+            method: "DELETE",
+          }
+        );
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Something went wrong");
+        return data;
+      } catch (error) {
+        console.error(error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      toast.success("Reply deleted successfully");
+      queryClient.setQueryData(["replies", comment?._id], (oldReplies) => {
+        if (!oldReplies) return oldReplies;
+        return oldReplies.filter((r) => r._id !== reply._id);
+      });
+    },
+  });
+
   const handleLikeReply = () => {
     if (isLikeReplyPending) return;
     likeReply();
+  };
+
+  const handleDeleteReply = () => {
+    if (isDeleteReplyPending) return;
+    deleteReply();
   };
 
   return (
@@ -93,7 +125,13 @@ const ReplyCard = ({
                     onClick={() => setEditReply(true)}
                   />
                 )}
-                <FaTrash className="cursor-pointer hover:text-red-500" />
+                {!isDeleteReplyPending && !editReply && (
+                  <FaTrash
+                    className="cursor-pointer hover:text-red-500"
+                    onClick={handleDeleteReply}
+                  />
+                )}
+                {isDeleteReplyPending && <LoadingSpinner size="sm" />}
               </span>
             )}
             <CommentReplyEdit

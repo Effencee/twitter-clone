@@ -320,6 +320,49 @@ export const updateComment = async (req, res) => {
   }
 };
 
+export const deleteComment = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const postId = req.params.id;
+    const commentId = req.params.commentId;
+
+    const post = await Post.findById(postId);
+
+    if (!post) {
+      return res.status(404).json({ error: "Post not found" });
+    }
+
+    const comment = post.comments.find(
+      (comment) => comment._id.toString() === commentId
+    );
+
+    if (!comment) {
+      return res.status(404).json({ error: "Comment not found" });
+    }
+
+    if (comment.user.toString() !== userId.toString()) {
+      return res
+        .status(401)
+        .json({ error: "You are not authorized to delete this comment" });
+    }
+
+    post.comments = post.comments.filter(
+      (comment) => comment._id.toString() !== commentId
+    );
+    await post.save();
+
+    const updatedPost = await Post.findById(postId).populate({
+      path: "comments.user",
+      select: "fullName username profileImg",
+    });
+
+    res.status(200).json(updatedPost);
+  } catch (error) {
+    console.log("Error in deleteComment controller: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 //reply interactions
 
 export const replyToComment = async (req, res) => {
@@ -483,15 +526,65 @@ export const udpateReply = async (req, res) => {
       select: "fullName username profileImg",
     });
 
-const updatedComment = updatedPost.comments.id(commentId);
-if (!updatedComment) return res.status(500).json({ error: "Updated comment not found" });
+    const updatedComment = updatedPost.comments.id(commentId);
+    if (!updatedComment)
+      return res.status(500).json({ error: "Updated comment not found" });
 
-const updatedReply = updatedComment.replies.id(replyId);
-if (!updatedReply) return res.status(500).json({ error: "Updated reply not found" });
+    const updatedReply = updatedComment.replies.id(replyId);
+    if (!updatedReply)
+      return res.status(500).json({ error: "Updated reply not found" });
 
     res.status(200).json(updatedReply);
   } catch (error) {
     console.log("Error in udpateReply controller: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const deleteReply = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const postId = req.params.id;
+    const commentId = req.params.commentId;
+    const replyId = req.params.replyId;
+
+    const post = await Post.findById(postId);
+
+    if (!post) {
+      return res.status(404).json({ error: "Post not found" });
+    }
+
+    const comment = post.comments.find(
+      (comment) => comment._id.toString() === commentId
+    );
+
+    if (!comment) {
+      return res.status(404).json({ error: "Comment not found" });
+    }
+
+    const reply = comment.replies.find(
+      (reply) => reply._id.toString() === replyId
+    );
+
+    if (!reply) {
+      return res.status(404).json({ error: "Reply not found" });
+    }
+
+    if (reply.user.toString() !== userId.toString()) {
+      return res.status(401).json({ error: "You are not authorized to delete this reply" });
+    }
+
+    comment.replies.filter((reply) => reply._id.toString() !== replyId);
+    await post.save();
+
+    const updatedPost = await Post.findById(postId).populate({
+      path: "comments.replies.user",
+      select: "fullName username profileImg",
+    });
+
+    res.status(200).json(updatedPost);
+  } catch (error) {
+    console.log("Error in deleteReply controller: ", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };

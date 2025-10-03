@@ -7,6 +7,7 @@ import LoadingSpinner from "./LoadingSpinner";
 import { fetchUser } from "../../services/userService";
 import ReplyCard from "./ReplyCard";
 import CommentReplyEdit from "./CommentReplyEdit";
+import toast from "react-hot-toast";
 
 const CommentCard = ({
   comment,
@@ -115,6 +116,35 @@ const CommentCard = ({
     },
   });
 
+  const { mutate: deleteComment, isPending: isDeletePending } = useMutation({
+    mutationFn: async () => {
+      try {
+        const res = await fetch(
+          `/api/posts/${postId}/comments/${comment?._id}`,
+          {
+            method: "DELETE",
+          }
+        );
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Something went wrong");
+        return data;
+      } catch (error) {
+        console.log(error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      toast.success("Comment deleted successfully");
+      queryClient.setQueryData(["post"], (oldPost) => {
+        if (!oldPost) return oldPost;
+        return {
+          ...oldPost,
+          comments: oldPost.comments.filter((c) => c._id !== comment._id),
+        };
+      });
+    },
+  });
+
   const toggleReplies = (commentId) => {
     setExpandedComments((prev) => ({
       ...prev,
@@ -131,6 +161,11 @@ const CommentCard = ({
     e.preventDefault();
     if (isReplyPending) return;
     replyOnPost();
+  };
+
+  const handleDeleteComment = () => {
+    if (isDeletePending) return;
+    deleteComment();
   };
 
   return (
@@ -159,7 +194,11 @@ const CommentCard = ({
                     onClick={() => setEditComment(true)}
                   />
                 )}
-                <FaTrash className="cursor-pointer hover:text-red-500" />
+                {!isDeletePending && !editComment && (
+                  <FaTrash className="cursor-pointer hover:text-red-500" 
+                  onClick={handleDeleteComment}/>
+                )}
+                {isDeletePending && <LoadingSpinner size="sm" />}
               </span>
             )}
             <CommentReplyEdit
