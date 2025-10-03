@@ -17,6 +17,8 @@ import {
   getAllReplies,
   likeUnlikeComment,
   likeUnlikeReply,
+  updateComment,
+  udpateReply,
 } from "../controllers/post.controller.js";
 
 const router = express.Router();
@@ -35,15 +37,22 @@ router.delete("/:id", protectRoute, deletePost);
 //interactions
 router.post("/:id/favourite", protectRoute, favUnfovPosts);
 router.post("/:id/like", protectRoute, likeUnlikePost);
+//comments
 router.post("/:id/comments", protectRoute, commentOnPost);
 router.post("/:id/comments/:commentId/like", protectRoute, likeUnlikeComment);
+router.put("/:id/comments/:commentId", protectRoute, updateComment);
 //replies
-router.post("/:id/comments/:commentId/replies", protectRoute, replyToComment);
 router.get("/:id/comments/:commentId/replies", protectRoute, getAllReplies);
+router.post("/:id/comments/:commentId/replies", protectRoute, replyToComment);
 router.post(
   "/:id/comments/:commentId/replies/:replyId/like",
   protectRoute,
   likeUnlikeReply
+);
+router.put(
+  "/:id/comments/:commentId/replies/:replyId",
+  protectRoute,
+  udpateReply
 );
 
 export default router;
