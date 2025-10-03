@@ -9,7 +9,6 @@ import ReplyCard from "./ReplyCard";
 
 const CommentCard = ({
   comment,
-  user,
   showReplyInput,
   setShowReplyInput,
   reply,
@@ -69,7 +68,7 @@ const CommentCard = ({
       setReplyInput(false);
       setReply("");
       queryClient.setQueryData(["replies", comment?._id], (oldReplies) => {
-        if (!oldReplies) return oldReplies;
+        if (!oldReplies) return [newReply];
         return [...oldReplies, newReply];
       });
     },
@@ -184,7 +183,7 @@ const CommentCard = ({
       </div>
       {showReplyInput === comment._id && (
         <Reply
-          user={user}
+          user={data}
           answer={reply}
           setAnswer={setReply}
           handleSubmit={handleReply}
@@ -207,7 +206,6 @@ const CommentCard = ({
         replies.map((reply) => (
           <ReplyCard
             key={reply._id}
-            user={user}
             comment={comment}
             reply={reply}
             replyText={replyText}

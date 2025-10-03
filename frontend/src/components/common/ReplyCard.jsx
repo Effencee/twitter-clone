@@ -7,7 +7,6 @@ import { fetchUser } from "../../services/userService";
 import LoadingSpinner from "./LoadingSpinner";
 
 const ReplyCard = ({
-  user,
   comment,
   reply,
   replyText,
@@ -70,16 +69,16 @@ const ReplyCard = ({
       <div className="flex gap-2 items-start px-4 pt-4 pb-2">
         <div className="avatar">
           <div className="w-8 h-8 lg:w-12 lg:h-12 rounded-full">
-            <img src={comment.user.profileImg || "/avatar-placeholder.png"} />
+            <img src={reply.user.profileImg || "/avatar-placeholder.png"} />
           </div>
         </div>
         <div className="flex flex-col">
           <div className="flex items-center gap-1">
             <span className="font-bold lg:text-lg">
-              {comment.user.fullName}
+              {reply.user.fullName}
             </span>
             <span className="text-gray-700 text-sm lg:text-lg">
-              @{comment.user.username}
+              @{reply.user.username}
             </span>
           </div>
           <div className="text-sm lg:text-lg">
@@ -121,7 +120,7 @@ const ReplyCard = ({
       </div>
       {replyInput === reply._id && (
         <Reply
-          user={user}
+          user={data}
           answer={replyText}
           setAnswer={setReplyText}
           handleSubmit={handleReply}
