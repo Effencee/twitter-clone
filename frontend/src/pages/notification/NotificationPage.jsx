@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import { toast } from "react-hot-toast";
 import { IoSettingsOutline } from "react-icons/io5";
-import { FaComment, FaUser } from "react-icons/fa";
+import { FaComment, FaUser, FaReply } from "react-icons/fa";
 import { FaHeart } from "react-icons/fa6";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -86,6 +86,9 @@ const NotificationPage = () => {
               {notification.type === "comment" && (
                 <FaComment className="w-7 h-7 text-blue-500" />
               )}
+              {notification.type === "reply" && (
+                <FaReply className="w-7 h-7 text-orange-500" />
+              )}
               <Link to={`/profile/${notification.from.username}`}>
                 <div className="avatar">
                   <div className="w-8 rounded-full">
@@ -104,6 +107,7 @@ const NotificationPage = () => {
                   {notification.type === "follow" && "followed you"}
                   {notification.type === "like" && "liked your post"}
                   {notification.type === "comment" && "commented on your post"}
+                  {notification.type === "reply" && "replied to your comment"}
                 </div>
               </Link>
             </div>

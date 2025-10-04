@@ -195,8 +195,10 @@ const CommentCard = ({
                   />
                 )}
                 {!isDeletePending && !editComment && (
-                  <FaTrash className="cursor-pointer hover:text-red-500" 
-                  onClick={handleDeleteComment}/>
+                  <FaTrash
+                    className="cursor-pointer hover:text-red-500"
+                    onClick={handleDeleteComment}
+                  />
                 )}
                 {isDeletePending && <LoadingSpinner size="sm" />}
               </span>

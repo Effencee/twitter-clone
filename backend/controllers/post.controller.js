@@ -393,16 +393,26 @@ export const replyToComment = async (req, res) => {
     comment.replies.push({ user: userId, text });
     await post.save();
 
-    const savedReply = comment.replies[comment.replies.length - 1];
+    const updatedPost = await Post.findById(postId).populate({
+      path: "comments.replies.user",
+      select: "fullName username profileImg",
+    });
+
+    const populatedComment = updatedPost.comments.find(
+      (c) => c._id.toString() === commentId
+    );
+
+    const lastReply =
+      populatedComment.replies[populatedComment.replies.length - 1];
 
     const notification = new Notification({
       from: userId,
-      to: post.user,
+      to: comment.user,
       type: "reply",
     });
     await notification.save();
 
-    res.status(200).json(savedReply);
+    res.status(200).json(lastReply);
   } catch (error) {
     console.log("Error in replieToComment controller: ", error.message);
     res.status(500).json({ error: "Internal server error" });
@@ -571,7 +581,9 @@ export const deleteReply = async (req, res) => {
     }
 
     if (reply.user.toString() !== userId.toString()) {
-      return res.status(401).json({ error: "You are not authorized to delete this reply" });
+      return res
+        .status(401)
+        .json({ error: "You are not authorized to delete this reply" });
     }
 
     comment.replies.filter((reply) => reply._id.toString() !== replyId);
