@@ -30,7 +30,7 @@ const Reply = ({ user, answer, setAnswer, handleSubmit, isAnswerPending }) => {
             >
               <EmojiPicker
                 onEmojiClick={(emojiData) => {
-                  setComment((prev) => {
+                  setAnswer((prev) => {
                     return prev + emojiData.emoji;
                   });
                 }}
