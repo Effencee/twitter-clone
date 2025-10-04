@@ -64,12 +64,14 @@ export const likeUnlikePost = async (req, res) => {
       await User.updateOne({ _id: userId }, { $push: { likedPosts: postId } });
       await post.save();
 
-      const notification = new Notification({
-        from: userId,
-        to: post.user,
-        type: "like",
-      });
-      await notification.save();
+      if (userId.toString() !== post.user.toString()) {
+        const notification = new Notification({
+          from: userId,
+          to: post.user,
+          type: "like",
+        });
+        await notification.save();
+      }
 
       res.status(200).json(post.likes);
     }
@@ -215,12 +217,14 @@ export const commentOnPost = async (req, res) => {
       select: "fullName username profileImg",
     });
 
-    const notification = new Notification({
-      from: userId,
-      to: post.user,
-      type: "comment",
-    });
-    await notification.save();
+    if (userId.toString() !== post.user.toString()) {
+      const notification = new Notification({
+        from: userId,
+        to: post.user,
+        type: "comment",
+      });
+      await notification.save();
+    }
 
     res.status(200).json(updatedPost);
   } catch (error) {
@@ -405,12 +409,14 @@ export const replyToComment = async (req, res) => {
     const lastReply =
       populatedComment.replies[populatedComment.replies.length - 1];
 
-    const notification = new Notification({
-      from: userId,
-      to: comment.user,
-      type: "reply",
-    });
-    await notification.save();
+    if (userId.toString() !== post.user.toString()) {
+      const notification = new Notification({
+        from: userId,
+        to: comment.user,
+        type: "reply",
+      });
+      await notification.save();
+    }
 
     res.status(200).json(lastReply);
   } catch (error) {
