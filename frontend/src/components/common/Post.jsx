@@ -28,6 +28,9 @@ const Post = ({ post }) => {
   const location = useLocation();
   const isMyPost = data._id === post.user._id;
   const formattedDate = formatPostDate(post.createdAt);
+  const totalComments =
+    post?.comments.length +
+    post?.comments.reduce((acc, comment) => acc + comment.replies.length, 0);
 
   const { mutate, isPending } = useMutation({
     mutationFn: async () => {
@@ -236,7 +239,7 @@ const Post = ({ post }) => {
               >
                 <FaRegComment className="w-4 h-4  text-slate-500 group-hover:text-sky-400" />
                 <span className="text-sm text-slate-500 group-hover:text-sky-400">
-                  {post.comments.length}
+                  {totalComments}
                 </span>
               </div>
               <dialog

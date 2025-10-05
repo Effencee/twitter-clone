@@ -75,6 +75,22 @@ const CommentCard = ({
         if (!oldReplies) return [newReply];
         return [...oldReplies, newReply];
       });
+      queryClient.setQueryData(["post"], (oldPost) => {
+        if (!oldPost) return oldPost;
+
+        return {
+          ...oldPost,
+          comments: oldPost.comments.map((c) => {
+            if (c._id === comment._id) {
+              return {
+                ...c,
+                replies: [...c.replies, newReply],
+              };
+            }
+            return c;
+          }),
+        };
+      });
     },
   });
 
